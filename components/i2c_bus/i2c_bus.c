@@ -18,8 +18,8 @@
 #define I2C_BUS_FLG_DEFAULT (0)
 #define I2C_BUS_MASTER_BUF_LEN (0)
 #define I2C_BUS_MS_TO_WAIT  (1000)
-#define I2C_BUS_TICKS_TO_WAIT (I2C_BUS_MS_TO_WAIT/portTICK_RATE_MS)
-#define I2C_BUS_MUTEX_TICKS_TO_WAIT (I2C_BUS_MS_TO_WAIT/portTICK_RATE_MS)
+#define I2C_BUS_TICKS_TO_WAIT (I2C_BUS_MS_TO_WAIT/portTICK_PERIOD_MS)
+#define I2C_BUS_MUTEX_TICKS_TO_WAIT (I2C_BUS_MS_TO_WAIT/portTICK_PERIOD_MS)
 
 static const char *TAG = "i2c_bus";
 static i2c_bus_t s_i2c_bus[I2C_NUM_MAX];
@@ -40,12 +40,12 @@ static i2c_bus_t s_i2c_bus[I2C_NUM_MAX];
     }
 
 #define I2C_BUS_MUTEX_TAKE(mutex, ret) if (!xSemaphoreTake(mutex, I2C_BUS_MUTEX_TICKS_TO_WAIT)) { \
-        ESP_LOGE(TAG, "i2c_bus take mutex timeout, max wait = %d ms", I2C_BUS_MUTEX_TICKS_TO_WAIT); \
+        ESP_LOGE(TAG, "i2c_bus take mutex timeout, max wait = %lu ms", I2C_BUS_MUTEX_TICKS_TO_WAIT); \
         return (ret); \
     }
 
 #define I2C_BUS_MUTEX_TAKE_MAX_DELAY(mutex, ret) if (!xSemaphoreTake(mutex, portMAX_DELAY)) { \
-        ESP_LOGE(TAG, "i2c_bus take mutex timeout, max wait = %d ms", portMAX_DELAY); \
+        ESP_LOGE(TAG, "i2c_bus take mutex timeout, max wait = %lu ms", portMAX_DELAY); \
         return (ret); \
     }
 
@@ -70,7 +70,7 @@ i2c_bus_handle_t i2c_bus_create(i2c_port_t port, const i2c_config_t *conf)
     if (s_i2c_bus[port].is_init) {
         /**if i2c_bus has been inited and configs not changed, return the handle directly**/
         if (i2c_config_compare(port, conf)) {
-            ESP_LOGW(TAG, "i2c%d has been inited, return handle directly, ref_counter=%d", port, s_i2c_bus[port].ref_counter);
+            //ESP_LOGW(TAG, "i2c%d has been inited, return handle directly, ref_counter=%l", port, s_i2c_bus[port].ref_counter);
             return (i2c_bus_handle_t)&s_i2c_bus[port];
         }
     } else {
@@ -95,7 +95,7 @@ esp_err_t i2c_bus_delete(i2c_bus_handle_t *p_bus)
 
     /** if ref_counter == 0, de-init the bus**/
     if ((i2c_bus->ref_counter) > 0) {
-        ESP_LOGW(TAG, "i2c%d is also handled by others ref_counter=%u, won't be de-inited", i2c_bus->i2c_port, i2c_bus->ref_counter);
+        //ESP_LOGW(TAG, "i2c%d is also handled by others ref_counter=%l, won't be de-inited", i2c_bus->i2c_port, i2c_bus->ref_counter);
         return ESP_OK;
     }
 
@@ -121,7 +121,7 @@ uint8_t i2c_bus_scan(i2c_bus_handle_t bus_handle, uint8_t *buf, uint8_t num)
         esp_err_t ret = i2c_master_cmd_begin(i2c_bus->i2c_port, cmd, I2C_BUS_TICKS_TO_WAIT);
 
         if (ret == ESP_OK) {
-            ESP_LOGI(TAG, "found i2c device address = 0x%02x", dev_address);
+            //ESP_LOGI(TAG, "found i2c device address = 0x%02x", dev_address);
             if (buf != NULL && device_count < num) {
                 *(buf + device_count) = dev_address;
             }
@@ -422,7 +422,7 @@ static esp_err_t i2c_driver_reinit(i2c_port_t port, const i2c_config_t *conf)
     if (s_i2c_bus[port].is_init) {
         i2c_driver_delete(port);
         s_i2c_bus[port].is_init = false;
-        ESP_LOGI(TAG, "i2c%d bus deinited", port);
+        //ESP_LOGI(TAG, "i2c%d bus deinited", port);
     }
 
     esp_err_t ret = i2c_param_config(port, conf);
@@ -430,7 +430,7 @@ static esp_err_t i2c_driver_reinit(i2c_port_t port, const i2c_config_t *conf)
     ret = i2c_driver_install(port, conf->mode, I2C_BUS_MASTER_BUF_LEN, I2C_BUS_MASTER_BUF_LEN, I2C_BUS_FLG_DEFAULT);
     I2C_BUS_CHECK(ret == ESP_OK, "i2c driver install failed", ret);
     s_i2c_bus[port].is_init = true;
-    ESP_LOGD(TAG, "i2c%d bus inited", port);
+    //ESP_LOGD(TAG, "i2c%d bus inited", port);
     return ESP_OK;
 }
 
@@ -440,7 +440,7 @@ static esp_err_t i2c_driver_deinit(i2c_port_t port)
     I2C_BUS_CHECK(s_i2c_bus[port].is_init == true, "i2c not inited", ESP_ERR_INVALID_STATE);
     i2c_driver_delete(port); //always return ESP_OK
     s_i2c_bus[port].is_init = false;
-    ESP_LOGD(TAG,"i2c%d bus deinited",port);
+    //ESP_LOGD(TAG,"i2c%d bus deinited",port);
     return ESP_OK;
 }
 
